@@ -1,0 +1,175 @@
+@page "/mangas"
+@inject HttpClient httpClient
+@inject NavigationManager NavigationManager
+@using Microsoft.AspNetCore.WebUtilities;
+@using MangaFlexFront.Data.Mangas.ViewModels;
+@using MangaFlexFront.Data.Mangas.Models;
+<PageTitle>Mangas</PageTitle>
+
+<style>
+    h1,
+    h2,
+    h3 {
+        text-align: center;
+    }
+
+    img {
+        border-radius: 10px;
+        width: 14.2em;
+        height: 21em;
+    }
+
+    span,
+    h1,
+    h2,
+    h3 {
+        font-family: 'Franklin Gothic Medium', 'Arial Narrow', Arial, sans-serif;
+    }
+
+    .title {
+        font-size: 1em;
+    }
+
+    .list,
+    .list>div {
+        flex-direction: column;
+        border: 2px solid dimgray;
+        border-radius: 15px;
+    }
+
+    .list {
+        display: block;
+        padding-bottom: 25px;
+    }
+
+    .list>div {
+        flex-direction: column;
+        display: inline-flex;
+        width: 240px;
+        height: 350px;
+        margin: 5px;
+        margin-bottom: 55px;
+
+    }
+
+    .list>div>div {
+        margin: 5px;
+        text-align: center;
+    }
+</style>
+
+
+
+@code {
+    private string searchQuery;
+    MangasViewModel mangas = new MangasViewModel { Mangas = new List<Manga>() };
+    protected override async Task OnParametersSetAsync()
+    {
+        await LoadMangas(1, GetSearchQueryFromUri());
+    }
+    private string GetSearchQueryFromUri()
+    {
+        var uri = NavigationManager.ToAbsoluteUri(NavigationManager.Uri);
+        return QueryHelpers.ParseQuery(uri.Query).TryGetValue("search", out var search) ? search : "";
+    }
+    protected override async Task OnInitializedAsync()
+    {
+        var uri = NavigationManager.ToAbsoluteUri(NavigationManager.Uri);
+        if (QueryHelpers.ParseQuery(uri.Query).TryGetValue("search", out var search))
+        {
+            searchQuery = search;
+        }
+
+        await LoadMangas(1, searchQuery);
+    }
+
+    private async Task LoadMangas(int page, string search)
+    {
+        try
+        {
+            var response = await httpClient.GetAsync($"http://localhost:5262/api/Mangas?page={page}&search={search}");
+
+            if (response.IsSuccessStatusCode)
+            {
+                mangas = await response.Content.ReadFromJsonAsync<MangasViewModel>();
+            }
+            else
+            {
+
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine(ex.Message);
+        }
+    }
+
+}
+
+<div class="text-center">
+    <h1 class="display-4">Mangas</h1>
+</div>
+
+@if (mangas is not null && mangas.Mangas.Any())
+{
+    <div class="page">
+        <div class="list mt-3">
+
+            @foreach (var manga in mangas.Mangas)
+            {
+                <div>
+                    <div class="img-div">
+                        <a href="@($"Manga/About/{manga.Id}")">
+                            <img src="@(manga.Cover ?? "https://upload.wikimedia.org/wikipedia/commons/thumb/7/71/Black.png/220px-Black.png")"
+                                alt="manga cover" />
+                        </a>
+                    </div>
+                    <div>
+                        <span class="title"><b>@(manga.Title ?? "Unknown")</b></span>
+                    </div>
+                </div>
+            }
+        </div>
+        <div class="pagination-container">
+            <nav>
+                <ul class="pagination justify-content-center mt-2">
+                    <li class="page-item @(mangas.Page == 1 ? "disabled" : "")">
+                        <button class="page-link" @onclick="() => LoadMangas(mangas.Page - 1,searchQuery)"
+                            tabindex="-1">&laquo;
+                            Previous</button>
+                    </li>
+                    <li class="page-item">
+                        <span class="page-link">@mangas.Page</span>
+                    </li>
+                    <li class="page-item @(mangas.Page == mangas.TotalPages ? "disabled" : "")">
+                        <button class="page-link" @onclick="() => LoadMangas(mangas.Page + 1,searchQuery)">Next
+                            &raquo;</button>
+                    </li>
+                </ul>
+            </nav>
+        </div>
+    </div>
+}
+else
+{
+    <div class="loading-container">
+        <div aria-label="Orange and tan hamster running in a metal wheel" role="img" class="wheel-and-hamster" id="loading">
+            <div class="wheel"></div>
+            <div class="hamster">
+                <div class="hamster__body">
+                    <div class="hamster__head">
+                        <div class="hamster__ear"></div>
+                        <div class="hamster__eye"></div>
+                        <div class="hamster__nose"></div>
+                    </div>
+                    <div class="hamster__limb hamster__limb--fr"></div>
+                    <div class="hamster__limb hamster__limb--fl"></div>
+                    <div class="hamster__limb hamster__limb--br"></div>
+                    <div class="hamster__limb hamster__limb--bl"></div>
+                    <div class="hamster__tail"></div>
+                </div>
+            </div>
+            <div class="spoke"></div>
+        </div>
+    </div>
+}

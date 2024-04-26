@@ -1,0 +1,109 @@
+@page "/AvailableLanguages/{mangaId}"
+@inject HttpClient HttpClient
+@using Blazored.LocalStorage
+@using MangaFlexFront.Data.ViewModels;
+@using System.Net.Http.Json;
+@using System.Net.Http.Headers
+@inject NavigationManager navigationManager
+@inject ILocalStorageService localStorageService
+@inject IJSRuntime JSRuntime
+
+<h3>Available Languages</h3>
+
+
+@if (availableLanguages != null)
+{
+    foreach (string language in availableLanguages.Languages)
+    {
+        <div>
+            <button @onclick="() => SetLanguage(language)" class="custom-button">@language</button>
+        </div>
+    }
+}
+else if (availableLanguages == null)
+{
+    <div class="loading-container">
+        <div aria-label="Orange and tan hamster running in a metal wheel" role="img" class="wheel-and-hamster" id="loading">
+            <div class="wheel"></div>
+            <div class="hamster">
+                <div class="hamster__body">
+                    <div class="hamster__head">
+                        <div class="hamster__ear"></div>
+                        <div class="hamster__eye"></div>
+                        <div class="hamster__nose"></div>
+                    </div>
+                    <div class="hamster__limb hamster__limb--fr"></div>
+                    <div class="hamster__limb hamster__limb--fl"></div>
+                    <div class="hamster__limb hamster__limb--br"></div>
+                    <div class="hamster__limb hamster__limb--bl"></div>
+                    <div class="hamster__tail"></div>
+                </div>
+            </div>
+            <div class="spoke"></div>
+        </div>
+    </div>
+}
+else
+{
+    <p>No available languages found.</p>
+}
+
+<script>
+    window.setCookie = function (name, value, path) {
+        document.cookie = name + "=" + value + "; path=" + path;
+    }
+</script>
+
+@code {
+    [Parameter]
+    public string MangaId { get; set; }
+    public AvailableLanguagesVM availableLanguages { get; set; }
+    string mangaId = string.Empty;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var request = new HttpRequestMessage(HttpMethod.Get,
+            $"http://localhost:5262/api/Manga/AvailableLanguages?id={MangaId}");
+            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", await
+            localStorageService.GetItemAsStringAsync("accessToken"));
+
+            var response = await HttpClient.SendAsync(request);
+            if (response.IsSuccessStatusCode)
+            {
+                availableLanguages = await response.Content.ReadFromJsonAsync<AvailableLanguagesVM>();
+            }
+
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error fetching available languages: {ex.Message}");
+        }
+    }
+
+
+    private async Task SetLanguage(string language)
+    {
+        try
+        {
+            var request = new HttpRequestMessage(HttpMethod.Get,
+            $"http://localhost:5262/api/Manga/SetLanguage?language={language}&mangaId={MangaId}");
+            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", await
+            localStorageService.GetItemAsStringAsync("accessToken"));
+
+            var response = await HttpClient.SendAsync(request);
+            if (response.IsSuccessStatusCode)
+            {
+                var responseVM = await response.Content.ReadFromJsonAsync<SetLanguageVM>();
+
+                await JSRuntime.InvokeVoidAsync("setCookie", "Language", responseVM.Language, "/");
+                navigationManager.NavigateTo($"/Manga/Read/{responseVM.MangaId}/1");
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error fetching available languages: {ex.Message}");
+        }
+    }
+}
