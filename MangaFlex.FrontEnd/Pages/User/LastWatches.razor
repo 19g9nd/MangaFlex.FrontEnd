@@ -127,7 +127,7 @@ else
     {
         try
         {
-            var request = new HttpRequestMessage(HttpMethod.Get, $"http://localhost:5262/api/User/LastWatches");
+            var request = new HttpRequestMessage(HttpMethod.Get, $"http://172.210.83.246/api/User/LastWatches");
             request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", await
             localStorageService.GetItemAsStringAsync("accessToken"));
 
